@@ -6,3 +6,12 @@ export/
 # Editor and OS
 .DS_Store
 Thumbs.db
+
+# Agent secrets and runtime state — never commit
+agent/.env
+agent/data/audit.log
+agent/data/staging/
+
+# Python cache
+__pycache__/
+*.pyc

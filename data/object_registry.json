@@ -1,0 +1,54 @@
+{
+  "player_main": {
+    "uid": "player_main",
+    "type": "player",
+    "metadata": {
+      "scene": "res://scenes/Player.tscn",
+      "groups": ["player"]
+    },
+    "sprites": {}
+  },
+  "capsule_green": {
+    "uid": "capsule_green",
+    "type": "absorbable",
+    "metadata": {
+      "scene": "res://scenes/AbsorbableObject.tscn",
+      "color": "#4DD966"
+    },
+    "sprites": {}
+  },
+  "capsule_blue": {
+    "uid": "capsule_blue",
+    "type": "absorbable",
+    "metadata": {
+      "scene": "res://scenes/AbsorbableObject.tscn",
+      "color": "#598CF2"
+    },
+    "sprites": {}
+  },
+  "capsule_yellow": {
+    "uid": "capsule_yellow",
+    "type": "absorbable",
+    "metadata": {
+      "scene": "res://scenes/AbsorbableObject.tscn",
+      "color": "#F2D94D"
+    },
+    "sprites": {}
+  },
+  "fist": {
+    "uid": "fist",
+    "type": "projectile",
+    "metadata": {
+      "scene": "res://scenes/Fist.tscn"
+    },
+    "sprites": {}
+  },
+  "goal": {
+    "uid": "goal",
+    "type": "goal",
+    "metadata": {
+      "scene": "res://scenes/Goal.tscn"
+    },
+    "sprites": {}
+  }
+}

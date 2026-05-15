@@ -22,6 +22,7 @@ config/icon="res://assets/sprites/icon.svg"
 [autoload]
 
 GameState="*res://scripts/game_state.gd"
+AssetRegistry="*res://scripts/asset_registry.gd"
 
 [display]
 
