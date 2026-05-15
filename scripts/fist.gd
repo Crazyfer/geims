@@ -16,6 +16,7 @@ var _state: State = State.REST
 var _facing: float = 1.0
 var _extension: float = 0.0
 var _hold_timer: float = 0.0
+var _current_max_extension: float = 0.0
 
 
 func _ready() -> void:
@@ -23,11 +24,17 @@ func _ready() -> void:
 	area_entered.connect(_on_area_entered)
 
 
-func launch(facing: float) -> void:
+func is_ready() -> bool:
+	return _state == State.REST
+
+
+func launch(facing: float, distance: float = -1.0) -> bool:
 	if _state != State.REST:
-		return
+		return false
 	_facing = facing
+	_current_max_extension = distance if distance > 0.0 else extend_distance
 	_state = State.EXTENDING
+	return true
 
 
 func set_visual_color(c: Color) -> void:
@@ -37,8 +44,8 @@ func set_visual_color(c: Color) -> void:
 func _process(delta: float) -> void:
 	match _state:
 		State.EXTENDING:
-			_extension = minf(_extension + extend_speed * delta, extend_distance)
-			if _extension >= extend_distance:
+			_extension = minf(_extension + extend_speed * delta, _current_max_extension)
+			if _extension >= _current_max_extension:
 				_state = State.HOLD
 				_hold_timer = hold_time
 		State.HOLD:

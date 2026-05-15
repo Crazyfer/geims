@@ -3,13 +3,29 @@ extends CharacterBody2D
 const SPEED: float = 220.0
 const JUMP_VELOCITY: float = -450.0
 const GRAVITY: float = 1200.0
+const MAX_JUMPS: int = 2
+const DOUBLE_JUMP_FACTOR: float = 0.9
+const COMBO_WINDOW: float = 0.8
+const COMBO_FINISHER_DISTANCE: float = 280.0
+const COMBO_FINISHER_EVERY: int = 3
 
 enum State { IDLE, RUN, JUMP, FALL }
+
+signal combo_changed(count: int)
 
 @onready var _interaction_area: Area2D = $InteractionArea
 @onready var _visual: Polygon2D = $Visual
 @onready var _fists: Array[Node] = [$Fists/FistLeft, $Fists/FistRight]
 @onready var _fist_visuals: Array[Polygon2D] = [$Fists/FistLeft/Visual, $Fists/FistRight/Visual]
+
+var _state: State = State.IDLE
+var _facing: float = 1.0
+var _was_on_floor: bool = true
+var _absorb_lock: bool = false
+var _land_squash: float = 0.0
+var _jumps_used: int = 0
+var _combo_count: int = 0
+var _combo_timer: float = 0.0
 
 
 func _ready() -> void:
@@ -17,22 +33,14 @@ func _ready() -> void:
 		fist.hit_absorbable.connect(_on_fist_hit)
 
 
-func _on_fist_hit(_absorbable: Node, color: Color) -> void:
-	_tint_to(color)
-
-var _state: State = State.IDLE
-var _facing: float = 1.0
-var _was_on_floor: bool = true
-var _absorb_lock: bool = false
-var _land_squash: float = 0.0
-
-
 func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y += GRAVITY * delta
 
-	if Input.is_action_just_pressed("jump") and is_on_floor():
-		velocity.y = JUMP_VELOCITY
+	if Input.is_action_just_pressed("jump") and _jumps_used < MAX_JUMPS:
+		var v: float = JUMP_VELOCITY if _jumps_used == 0 else JUMP_VELOCITY * DOUBLE_JUMP_FACTOR
+		velocity.y = v
+		_jumps_used += 1
 
 	var direction: float = Input.get_axis("move_left", "move_right")
 	velocity.x = direction * SPEED
@@ -45,6 +53,7 @@ func _physics_process(delta: float) -> void:
 	var on_floor: bool = is_on_floor()
 	if on_floor and not _was_on_floor:
 		_land_squash = 1.0
+		_jumps_used = 0
 	_was_on_floor = on_floor
 
 	if not on_floor:
@@ -54,14 +63,37 @@ func _physics_process(delta: float) -> void:
 	else:
 		_state = State.IDLE
 
+	if _combo_timer > 0.0:
+		_combo_timer -= delta
+		if _combo_timer <= 0.0 and _combo_count > 0:
+			_combo_count = 0
+			combo_changed.emit(_combo_count)
+
 	if Input.is_action_just_pressed("interact"):
 		_try_absorb()
 
 	if Input.is_action_just_pressed("throw_fists"):
-		for fist in _fists:
-			fist.launch(_facing)
+		_try_throw_punch()
 
 	_update_visual(delta)
+
+
+func _try_throw_punch() -> void:
+	var prospective_combo: int = _combo_count + 1
+	var is_finisher: bool = prospective_combo % COMBO_FINISHER_EVERY == 0
+	var distance: float = COMBO_FINISHER_DISTANCE if is_finisher else -1.0
+
+	var launched: bool = false
+	for fist in _fists:
+		if fist.launch(_facing, distance):
+			launched = true
+
+	if not launched:
+		return
+
+	_combo_count = prospective_combo
+	_combo_timer = COMBO_WINDOW
+	combo_changed.emit(_combo_count)
 
 
 func _try_absorb() -> void:
@@ -75,6 +107,10 @@ func _try_absorb() -> void:
 	_play_absorb_animation()
 	target.absorb()
 	_tint_to(absorbed_color)
+
+
+func _on_fist_hit(_absorbable: Node, color: Color) -> void:
+	_tint_to(color)
 
 
 func _tint_to(color: Color) -> void:

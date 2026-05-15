@@ -1,9 +1,11 @@
 extends Node2D
 
 @onready var _consumed_label: Label = $HUD/ConsumedLabel
+@onready var _combo_label: Label = $HUD/ComboLabel
 @onready var _ending_panel: ColorRect = $HUD/EndingPanel
 @onready var _ending_label: Label = $HUD/EndingPanel/EndingLabel
 @onready var _goal: Area2D = $Goal
+@onready var _player: Node = $Player
 
 var _ended: bool = false
 
@@ -12,8 +14,17 @@ func _ready() -> void:
 	GameState.reset()
 	GameState.consumed_changed.connect(_on_consumed_changed)
 	_goal.goal_reached.connect(_on_goal_reached)
+	_player.combo_changed.connect(_on_combo_changed)
 	_ending_panel.visible = false
 	_consumed_label.text = "Consumed: 0"
+	_combo_label.text = ""
+
+
+func _on_combo_changed(count: int) -> void:
+	if count >= 2:
+		_combo_label.text = "Combo x%d" % count
+	else:
+		_combo_label.text = ""
 
 
 func _on_consumed_changed(count: int) -> void:
