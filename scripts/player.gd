@@ -9,6 +9,16 @@ enum State { IDLE, RUN, JUMP, FALL }
 @onready var _interaction_area: Area2D = $InteractionArea
 @onready var _visual: Polygon2D = $Visual
 @onready var _fists: Array[Node] = [$Fists/FistLeft, $Fists/FistRight]
+@onready var _fist_visuals: Array[Polygon2D] = [$Fists/FistLeft/Visual, $Fists/FistRight/Visual]
+
+
+func _ready() -> void:
+	for fist in _fists:
+		fist.hit_absorbable.connect(_on_fist_hit)
+
+
+func _on_fist_hit(_absorbable: Node, color: Color) -> void:
+	_tint_to(color)
 
 var _state: State = State.IDLE
 var _facing: float = 1.0
@@ -71,8 +81,8 @@ func _tint_to(color: Color) -> void:
 	var tween: Tween = create_tween()
 	tween.set_parallel(true)
 	tween.tween_property(_visual, "color", color, 0.4)
-	for fist in _fists:
-		tween.tween_property(fist, "color", color, 0.4)
+	for fv in _fist_visuals:
+		tween.tween_property(fv, "color", color, 0.4)
 
 
 func _play_absorb_animation() -> void:

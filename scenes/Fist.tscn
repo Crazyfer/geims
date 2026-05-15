@@ -2,7 +2,17 @@
 
 [ext_resource type="Script" path="res://scripts/fist.gd" id="1_fist"]
 
-[node name="Fist" type="Polygon2D"]
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_fist"]
+size = Vector2(14, 14)
+
+[node name="Fist" type="Area2D"]
+collision_layer = 4
+collision_mask = 2
+script = ExtResource("1_fist")
+
+[node name="Visual" type="Polygon2D" parent="."]
 color = Color(0.32, 0.58, 0.92, 1)
 polygon = PackedVector2Array(-7, -7, 7, -7, 7, 7, -7, 7)
-script = ExtResource("1_fist")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_fist")
