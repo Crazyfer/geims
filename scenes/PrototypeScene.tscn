@@ -87,7 +87,7 @@ offset_left = 20.0
 offset_top = 56.0
 offset_right = 600.0
 offset_bottom = 88.0
-text = "Move: A/D  Jump: Space  Absorb: E  Restart: R"
+text = "Move: A/D  Jump: Space  Absorb: E  Punch: F / Mouse  Restart: R"
 theme_override_font_sizes/font_size = 16
 modulate = Color(0.75, 0.75, 0.75, 1)
 

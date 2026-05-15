@@ -8,6 +8,7 @@ enum State { IDLE, RUN, JUMP, FALL }
 
 @onready var _interaction_area: Area2D = $InteractionArea
 @onready var _visual: Polygon2D = $Visual
+@onready var _fists: Array[Node] = [$Fists/FistLeft, $Fists/FistRight]
 
 var _state: State = State.IDLE
 var _facing: float = 1.0
@@ -46,6 +47,10 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("interact"):
 		_try_absorb()
 
+	if Input.is_action_just_pressed("throw_fists"):
+		for fist in _fists:
+			fist.launch(_facing)
+
 	_update_visual(delta)
 
 
@@ -55,9 +60,19 @@ func _try_absorb() -> void:
 	var target: Node = _interaction_area.current_target
 	if target == null or not target.has_method("absorb"):
 		return
+	var absorbed_color: Color = target.capsule_color
 	_absorb_lock = true
 	_play_absorb_animation()
 	target.absorb()
+	_tint_to(absorbed_color)
+
+
+func _tint_to(color: Color) -> void:
+	var tween: Tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(_visual, "color", color, 0.4)
+	for fist in _fists:
+		tween.tween_property(fist, "color", color, 0.4)
 
 
 func _play_absorb_animation() -> void:

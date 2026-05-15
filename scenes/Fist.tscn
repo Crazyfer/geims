@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://bfist001"]
+
+[ext_resource type="Script" path="res://scripts/fist.gd" id="1_fist"]
+
+[node name="Fist" type="Polygon2D"]
+color = Color(0.32, 0.58, 0.92, 1)
+polygon = PackedVector2Array(-7, -7, 7, -7, 7, 7, -7, 7)
+script = ExtResource("1_fist")

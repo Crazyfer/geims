@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/interaction_area.gd" id="2_interact"]
+[ext_resource type="PackedScene" uid="uid://bfist001" path="res://scenes/Fist.tscn" id="3_fist"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
 size = Vector2(32, 48)
@@ -25,3 +26,13 @@ collision_mask = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionArea"]
 shape = SubResource("RectangleShape2D_reach")
+
+[node name="Fists" type="Node2D" parent="."]
+
+[node name="FistLeft" parent="Fists" instance=ExtResource("3_fist")]
+position = Vector2(-22, 6)
+rest_position = Vector2(-22, 6)
+
+[node name="FistRight" parent="Fists" instance=ExtResource("3_fist")]
+position = Vector2(22, 6)
+rest_position = Vector2(22, 6)
