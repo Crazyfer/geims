@@ -21,7 +21,9 @@
 [CmdletBinding()]
 param(
     [string]$Scenario,
-    [switch]$ShowFull
+    [switch]$ShowFull,
+    [switch]$Windowed,
+    [double]$Linger = 0.0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -52,13 +54,22 @@ if ($Scenario) {
 $passed = 0
 $failed = @()
 
+$effectiveLinger = $Linger
+if ($Windowed -and $effectiveLinger -le 0.0) { $effectiveLinger = 3.0 }
+
 foreach ($s in $scenarios) {
     Write-Output "=== $($s.BaseName) ==="
     $stdoutTmp = New-TemporaryFile
     $stderrTmp = New-TemporaryFile
     $rel = "res://tests/scenarios/$($s.Name)"
+
+    $godotArgs = @()
+    if (-not $Windowed) { $godotArgs += '--headless' }
+    $godotArgs += @('--path', $projectRoot, 'res://tests/test_runner.tscn', '--', '--scenario', $rel)
+    if ($effectiveLinger -gt 0.0) { $godotArgs += @('--linger', ('{0:N2}' -f $effectiveLinger)) }
+
     $proc = Start-Process -FilePath $godot `
-        -ArgumentList @('--headless','--path',$projectRoot,'res://tests/test_runner.tscn','--','--scenario',$rel) `
+        -ArgumentList $godotArgs `
         -NoNewWindow -Wait -PassThru `
         -RedirectStandardOutput $stdoutTmp.FullName `
         -RedirectStandardError  $stderrTmp.FullName

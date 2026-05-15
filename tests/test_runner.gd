@@ -23,12 +23,13 @@ var _max_duration: float = 10.0
 var _scenario_path: String = ""
 var _prototype: Node = null
 var _player: Node = null
+var _linger_seconds: float = 0.0
+var _finished: bool = false
 
 
 func _ready() -> void:
-	_scenario_path = _get_scenario_arg()
-	if _scenario_path == "":
-		_scenario_path = DEFAULT_SCENARIO
+	_scenario_path = _get_string_arg("--scenario", DEFAULT_SCENARIO)
+	_linger_seconds = float(_get_string_arg("--linger", "0.0"))
 
 	if not _load_scenario(_scenario_path):
 		_emit("error", "could_not_load", _scenario_path)
@@ -49,6 +50,8 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _finished:
+		return
 	_time += delta
 
 	while _next_action < _actions.size() and float(_actions[_next_action]["at"]) <= _time:
@@ -123,6 +126,9 @@ func _compare(actual: Variant, op: String, expected: Variant) -> bool:
 
 
 func _finish(timed_out: bool) -> void:
+	if _finished:
+		return
+	_finished = true
 	var total: int = _results.size()
 	var passed: int = _results.filter(func(r: Dictionary) -> bool: return r.passed).size()
 	var failed_specs: Array = _results.filter(func(r: Dictionary) -> bool: return not r.passed)
@@ -131,6 +137,9 @@ func _finish(timed_out: bool) -> void:
 	for f in failed_specs:
 		_emit("fail_detail", "", "%s %s %s actual=%s" % [f.property, f.op, str(f.expected), str(f.actual)])
 	var exit_code: int = 0 if status == "PASS" else 1
+	if _linger_seconds > 0.0:
+		_emit("linger", "", "%.2fs" % _linger_seconds)
+		await get_tree().create_timer(_linger_seconds).timeout
 	_quit(exit_code)
 
 
@@ -156,9 +165,9 @@ func _load_scenario(path: String) -> bool:
 	return true
 
 
-func _get_scenario_arg() -> String:
+func _get_string_arg(flag: String, fallback: String) -> String:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
 	for i in args.size():
-		if args[i] == "--scenario" and i + 1 < args.size():
+		if args[i] == flag and i + 1 < args.size():
 			return args[i + 1]
-	return ""
+	return fallback

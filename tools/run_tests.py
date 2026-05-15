@@ -50,16 +50,14 @@ def list_scenarios() -> list[Path]:
     return sorted(SCENARIOS_DIR.glob("*.json"))
 
 
-def run_scenario(godot_bin: str, scenario: Path) -> tuple[bool, str]:
+def run_scenario(godot_bin: str, scenario: Path, *, windowed: bool, linger: float) -> tuple[bool, str]:
     rel = f"res://tests/scenarios/{scenario.name}"
-    cmd = [
-        godot_bin,
-        "--headless",
-        "--path", str(PROJECT_ROOT),
-        TEST_RUNNER_RES,
-        "--",
-        "--scenario", rel,
-    ]
+    cmd: list[str] = [godot_bin]
+    if not windowed:
+        cmd.append("--headless")
+    cmd += ["--path", str(PROJECT_ROOT), TEST_RUNNER_RES, "--", "--scenario", rel]
+    if linger > 0.0:
+        cmd += ["--linger", f"{linger:.2f}"]
     try:
         proc = subprocess.run(
             cmd,
@@ -99,7 +97,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--scenario", help="Run only this scenario (without .json)")
     parser.add_argument("-v", "--verbose", action="store_true", help="Stream Godot stdout/stderr")
+    parser.add_argument("--windowed", action="store_true", help="Open Godot's window instead of running headless")
+    parser.add_argument("--linger", type=float, default=0.0, help="Seconds to wait before quitting after assertions")
     args = parser.parse_args()
+    effective_linger = args.linger if args.linger > 0.0 else (3.0 if args.windowed else 0.0)
 
     godot_bin = find_godot()
     print(f"godot: {godot_bin}")
@@ -116,7 +117,7 @@ def main() -> int:
 
     for scenario in scenarios:
         print(f"=== {scenario.stem} ===")
-        ok, output = run_scenario(godot_bin, scenario)
+        ok, output = run_scenario(godot_bin, scenario, windowed=args.windowed, linger=effective_linger)
         if args.verbose:
             print(output)
         else:

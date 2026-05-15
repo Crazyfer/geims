@@ -1,0 +1,24 @@
+{
+  "description": "Demo: walk, single jump, double jump, punch combo, ranged absorb, E absorb.",
+  "max_duration": 18.0,
+  "actions": [
+    {"at": 1.0,  "action": "jump",        "duration": 0.05},
+    {"at": 2.0,  "action": "jump",        "duration": 0.05},
+    {"at": 2.15, "action": "jump",        "duration": 0.05},
+    {"at": 3.5,  "action": "throw_fists", "duration": 0.05},
+    {"at": 4.0,  "action": "throw_fists", "duration": 0.05},
+    {"at": 4.5,  "action": "throw_fists", "duration": 0.05},
+    {"at": 6.0,  "action": "move_right",  "press": true},
+    {"at": 7.5,  "action": "throw_fists", "duration": 0.05},
+    {"at": 8.5,  "action": "move_right",  "press": false},
+    {"at": 8.7,  "action": "interact",    "duration": 0.05},
+    {"at": 9.5,  "action": "move_right",  "press": true},
+    {"at": 10.7, "action": "move_right",  "press": false},
+    {"at": 10.9, "action": "interact",    "duration": 0.05},
+    {"at": 12.0, "action": "jump",        "duration": 0.05},
+    {"at": 12.18,"action": "jump",        "duration": 0.05}
+  ],
+  "assertions": [
+    {"at": 11.5, "property": "GameState.consumed_objects", "op": ">=", "expected": 2}
+  ]
+}
