@@ -1,6 +1,8 @@
-# tools/run_tests.py
+# test harness
 
 Headless test harness that drives the Godot game with scripted inputs.
+Two equivalent orchestrators are provided: `run_tests.py` (Python) and
+`run_tests.ps1` (PowerShell, for Windows without Python).
 
 ## How it works
 
@@ -27,10 +29,18 @@ python tools/run_tests.py
 
 ## Running
 
+Python (cross-platform):
 ```
 python tools/run_tests.py                # all scenarios
 python tools/run_tests.py --scenario smoke
 python tools/run_tests.py -v             # full Godot stdout for each run
+```
+
+PowerShell (Windows):
+```powershell
+.\tools\run_tests.ps1
+.\tools\run_tests.ps1 -Scenario double_jump
+.\tools\run_tests.ps1 -ShowFull
 ```
 
 ## Scenario format

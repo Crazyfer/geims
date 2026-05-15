@@ -38,7 +38,7 @@ func _ready() -> void:
 	_max_duration = float(_scenario.get("max_duration", 10.0))
 
 	_prototype = PROTOTYPE_SCENE.instantiate()
-	get_parent().add_child(_prototype)
+	get_parent().add_child.call_deferred(_prototype)
 	_player = _prototype.get_node_or_null("Player")
 	if _player == null:
 		_emit("error", "no_player_found", _scenario_path)
