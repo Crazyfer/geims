@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://babsorb001"]
+
+[ext_resource type="Script" path="res://scripts/absorbable_object.gd" id="1_absorb"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_capsule"]
+size = Vector2(28, 28)
+
+[node name="AbsorbableObject" type="Area2D"]
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("1_absorb")
+
+[node name="Visual" type="Polygon2D" parent="."]
+color = Color(0.3, 0.85, 0.4, 1)
+polygon = PackedVector2Array(-14, -14, 14, -14, 14, 14, -14, 14)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_capsule")

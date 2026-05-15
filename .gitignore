@@ -4,7 +4,5 @@
 export/
 
 # Editor and OS
-.import/
-*.uid
 .DS_Store
 Thumbs.db
