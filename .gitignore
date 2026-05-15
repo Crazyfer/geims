@@ -1,0 +1,10 @@
+# Godot-specific ignores
+.godot/
+*.translation
+export/
+
+# Editor and OS
+.import/
+*.uid
+.DS_Store
+Thumbs.db
