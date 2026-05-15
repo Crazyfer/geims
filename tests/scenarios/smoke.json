@@ -1,0 +1,10 @@
+{
+  "description": "Smoke: player exists, no consumption, stays on floor.",
+  "max_duration": 2.0,
+  "actions": [],
+  "assertions": [
+    {"at": 1.0, "property": "GameState.consumed_objects", "op": "==", "expected": 0},
+    {"at": 1.0, "property": "Player.position.y", "op": "<=", "expected": 700},
+    {"at": 1.0, "property": "Player.is_on_floor", "op": "==", "expected": true}
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "description": "Three rapid punches stack the combo counter to 3.",
+  "max_duration": 4.0,
+  "actions": [
+    {"at": 0.4, "action": "throw_fists", "duration": 0.05},
+    {"at": 0.9, "action": "throw_fists", "duration": 0.05},
+    {"at": 1.4, "action": "throw_fists", "duration": 0.05}
+  ],
+  "assertions": [
+    {"at": 1.5, "property": "Player.combo_count", "op": "==", "expected": 3}
+  ]
+}

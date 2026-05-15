@@ -1,0 +1,12 @@
+{
+  "description": "Two jumps in succession reach higher than a single jump apex (~y=516).",
+  "max_duration": 3.0,
+  "actions": [
+    {"at": 0.4, "action": "jump", "duration": 0.05},
+    {"at": 0.6, "action": "jump", "duration": 0.05}
+  ],
+  "assertions": [
+    {"at": 0.95, "property": "Player.position.y", "op": "<", "expected": 500},
+    {"at": 0.95, "property": "Player.jumps_used", "op": "==", "expected": 2}
+  ]
+}

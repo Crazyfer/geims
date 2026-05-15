@@ -1,0 +1,13 @@
+{
+  "description": "Walk right toward green capsule and absorb it with E.",
+  "max_duration": 5.0,
+  "actions": [
+    {"at": 0.3, "action": "move_right", "press": true},
+    {"at": 1.8, "action": "move_right", "press": false},
+    {"at": 2.0, "action": "interact",   "duration": 0.05}
+  ],
+  "assertions": [
+    {"at": 1.5, "property": "Player.position.x", "op": ">", "expected": 350},
+    {"at": 3.5, "property": "GameState.consumed_objects", "op": "==", "expected": 1}
+  ]
+}
