@@ -13,9 +13,7 @@ size = Vector2(72, 64)
 [node name="Player" type="CharacterBody2D" groups=["player"]]
 script = ExtResource("1_player")
 
-[node name="Visual" type="Polygon2D" parent="."]
-color = Color(0.32, 0.58, 0.92, 1)
-polygon = PackedVector2Array(-16, -24, 16, -24, 16, 24, -16, 24)
+[node name="Visual" type="AnimatedSprite2D" parent="."]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("RectangleShape2D_body")

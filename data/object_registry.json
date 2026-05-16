@@ -6,7 +6,14 @@
       "scene": "res://scenes/Player.tscn",
       "groups": ["player"]
     },
-    "sprites": {}
+    "sprites": {
+      "idle":  "res://assets/player/player_00.png",
+      "idle2": "res://assets/player/player_01.png",
+      "run0":  "res://assets/player/player_02.png",
+      "run1":  "res://assets/player/player_03.png",
+      "jump":  "res://assets/player/player_04.png",
+      "fall":  "res://assets/player/player_05.png"
+    }
   },
   "capsule_green": {
     "uid": "capsule_green",
