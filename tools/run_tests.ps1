@@ -125,7 +125,11 @@ foreach ($s in $scenarios) {
     }
     Remove-Item $stdoutTmp.FullName, $stderrTmp.FullName -Force
 
-    if ($proc.ExitCode -eq 0) { $passed++ } else { $failed += $s.BaseName }
+    # Use stdout summary as authoritative signal; Godot may exit non-zero on
+    # Windows headless due to Vulkan/display init errors unrelated to test outcome.
+    $summaryLine = $stdout | Where-Object { $_ -match '\[TEST\].*\bsummary\b' } | Select-Object -Last 1
+    $scenePassed = $summaryLine -match 'summary PASS'
+    if ($scenePassed) { $passed++ } else { $failed += $s.BaseName }
     Write-Output ""
 }
 
