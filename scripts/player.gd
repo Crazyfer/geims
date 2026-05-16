@@ -14,7 +14,7 @@ enum State { IDLE, RUN, JUMP, FALL }
 signal combo_changed(count: int)
 
 @onready var _interaction_area: Area2D = $InteractionArea
-@onready var _visual: Polygon2D = $Visual
+@onready var _visual: AnimatedSprite2D = $Visual
 @onready var _fists: Array[Node] = [$Fists/FistLeft, $Fists/FistRight]
 @onready var _fist_visuals: Array[Polygon2D] = [$Fists/FistLeft/Visual, $Fists/FistRight/Visual]
 
@@ -29,8 +29,52 @@ var _combo_timer: float = 0.0
 
 
 func _ready() -> void:
+	_setup_sprite_frames()
 	for fist in _fists:
 		fist.hit_absorbable.connect(_on_fist_hit)
+
+
+func _setup_sprite_frames() -> void:
+	var frames := SpriteFrames.new()
+	frames.remove_animation(&"default")
+
+	var tex: Array[Texture2D] = []
+	for i in 6:
+		var res_path := "res://assets/player/player_%02d.png" % i
+		var t: Texture2D = load(res_path)
+		if t == null:
+			var img := Image.load_from_file(ProjectSettings.globalize_path(res_path))
+			if img:
+				t = ImageTexture.create_from_image(img)
+		if t == null:
+			push_error("player sprite missing: " + res_path)
+			return
+		tex.append(t)
+
+	frames.add_animation(&"idle")
+	frames.set_animation_speed(&"idle", 4.0)
+	frames.set_animation_loop(&"idle", true)
+	frames.add_frame(&"idle", tex[0])
+	frames.add_frame(&"idle", tex[1])
+
+	frames.add_animation(&"run")
+	frames.set_animation_speed(&"run", 10.0)
+	frames.set_animation_loop(&"run", true)
+	for t in tex:
+		frames.add_frame(&"run", t)
+
+	frames.add_animation(&"jump")
+	frames.set_animation_speed(&"jump", 5.0)
+	frames.set_animation_loop(&"jump", false)
+	frames.add_frame(&"jump", tex[4])
+
+	frames.add_animation(&"fall")
+	frames.set_animation_speed(&"fall", 5.0)
+	frames.set_animation_loop(&"fall", false)
+	frames.add_frame(&"fall", tex[5])
+
+	_visual.sprite_frames = frames
+	_visual.play(&"idle")
 
 
 func _physics_process(delta: float) -> void:
@@ -116,15 +160,15 @@ func _on_fist_hit(_absorbable: Node, color: Color) -> void:
 func _tint_to(color: Color) -> void:
 	var tween: Tween = create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(_visual, "color", color, 0.4)
+	tween.tween_property(_visual, "modulate", color, 0.4)
 	for fv in _fist_visuals:
 		tween.tween_property(fv, "color", color, 0.4)
 
 
 func _play_absorb_animation() -> void:
 	var tween: Tween = create_tween()
-	tween.tween_property(_visual, "scale", Vector2(1.2 * _facing, 0.82), 0.08)
-	tween.tween_property(_visual, "scale", Vector2(1.0 * _facing, 1.0), 0.12)
+	tween.tween_property(_visual, "scale", Vector2(1.2, 0.82), 0.08)
+	tween.tween_property(_visual, "scale", Vector2(1.0, 1.0), 0.12)
 	tween.tween_callback(func() -> void: _absorb_lock = false)
 
 
@@ -132,23 +176,32 @@ func _update_visual(delta: float) -> void:
 	if _absorb_lock:
 		return
 
-	var target_scale: Vector2 = Vector2(1.0, 1.0)
+	_visual.flip_h = _facing < 0.0
+
+	var anim := &"idle"
+	var target_scale := Vector2(1.0, 1.0)
 
 	match _state:
 		State.IDLE:
+			anim = &"idle"
 			var bob: float = sin(Time.get_ticks_msec() / 280.0) * 0.02
 			target_scale = Vector2(1.0, 1.0 + bob)
 		State.RUN:
+			anim = &"run"
 			var wob: float = sin(Time.get_ticks_msec() / 90.0) * 0.04
 			target_scale = Vector2(1.0 - wob, 1.0 + wob)
 		State.JUMP:
+			anim = &"jump"
 			target_scale = Vector2(0.88, 1.18)
 		State.FALL:
+			anim = &"fall"
 			target_scale = Vector2(1.06, 0.94)
+
+	if _visual.animation != anim:
+		_visual.play(anim)
 
 	if _land_squash > 0.0:
 		target_scale = target_scale.lerp(Vector2(1.2, 0.8), _land_squash)
 		_land_squash = maxf(0.0, _land_squash - delta * 6.0)
 
-	target_scale.x *= _facing
 	_visual.scale = _visual.scale.lerp(target_scale, clampf(delta * 18.0, 0.0, 1.0))

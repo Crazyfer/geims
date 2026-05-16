@@ -4,9 +4,24 @@
     "type": "player",
     "metadata": {
       "scene": "res://scenes/Player.tscn",
-      "groups": ["player"]
+      "groups": [
+        "player"
+      ]
     },
-    "sprites": {}
+    "sprites": {
+      "idle": "res://assets/player/player_00.png",
+      "idle2": "res://assets/player/player_01.png",
+      "run0": "res://assets/player/player_02.png",
+      "run1": "res://assets/player/player_03.png",
+      "jump": "res://assets/player/player_04.png",
+      "fall": "res://assets/player/player_05.png",
+      "idle_00": "res://assets/player/player_main_idle_00.png",
+      "idle_01": "res://assets/player/player_main_idle_01.png",
+      "idle_02": "res://assets/player/player_main_idle_02.png",
+      "idle_03": "res://assets/player/player_main_idle_03.png",
+      "idle_04": "res://assets/player/player_main_idle_04.png",
+      "idle_05": "res://assets/player/player_main_idle_05.png"
+    }
   },
   "capsule_green": {
     "uid": "capsule_green",

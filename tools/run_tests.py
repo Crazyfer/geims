@@ -73,10 +73,14 @@ def run_scenario(godot_bin: str, scenario: Path, *, windowed: bool, linger: floa
     output = proc.stdout or ""
     if proc.stderr:
         output += "\n--- stderr ---\n" + proc.stderr
-    return proc.returncode == 0, output
+    # Use stdout summary as authoritative signal; Godot may exit non-zero on
+    # Windows headless due to Vulkan/display init errors unrelated to test outcome.
+    m = SUMMARY_RE.search(output)
+    passed = m is not None and m.group(1) == "PASS"
+    return passed, output
 
 
-SUMMARY_RE = re.compile(r"\[TEST\][^\n]*summary (\w+) (\d+)/(\d+)")
+SUMMARY_RE = re.compile(r"\[TEST\][^\n]*\bsummary\b (\w+) (\d+)/(\d+)")
 FAIL_DETAIL_RE = re.compile(r"\[TEST\][^\n]*fail_detail\s*(.*)")
 
 
