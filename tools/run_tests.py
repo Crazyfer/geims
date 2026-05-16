@@ -34,7 +34,7 @@ def find_godot() -> str:
         if p.exists():
             return str(p)
         sys.exit(f"GODOT_BIN points to {env_path} which does not exist.")
-    for name in ("godot", "godot.exe", "Godot.exe", "Godot_v4-stable_win64.exe"):
+    for name in ("godot", "godot.exe", "Godot.exe", "Godot_v4-stable_win64.exe", "Godot_v4.6.2-stable_win64.exe"):
         p = which(name)
         if p:
             return p

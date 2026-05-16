@@ -1,12 +1,18 @@
-"""Subprocess that the Discord bot spawns for each command. Loads the system
-prompt, runs the Anthropic tool-use loop, and writes a single JSON line to
-stdout on completion.
+"""Subprocess that the Discord bot spawns for each command. Spawns the Claude
+CLI as a child process using the 'gamedev' agent definition, parses the
+streamed JSONL output, and writes a single JSON line to stdout on completion.
 
 Invoked as:
     python -m agent.agent_runner --task <text> [--attachments file1 file2 ...]
+                                 [--session-id <uuid>]
 
-stdin/stderr from tools are captured into an audit log; only the final
-summary is returned on stdout under the key "summary".
+The Claude CLI inherits the user's local authentication (~/.claude/), so no
+ANTHROPIC_API_KEY is needed.
+
+Session continuity: when --session-id is provided the CLI resumes the existing
+session, giving the agent full context of previous messages in that channel.
+The session_id emitted by the CLI in the init event is returned alongside the
+result so the caller can store it for the next invocation.
 """
 
 from __future__ import annotations
@@ -14,145 +20,132 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
-import time
 from pathlib import Path
 
-from anthropic import Anthropic
-
-# Make 'agent' importable when invoked as a module from elsewhere.
 PKG_ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(PKG_ROOT.parent))
 
-from agent import tools as t  # noqa: E402
-
-MODEL = "claude-sonnet-4-5"  # change to "claude-sonnet-4-6" once your Anthropic project has access
-MAX_ITERATIONS = 30
-MAX_TOKENS = 4096
+CLAUDE_BIN = os.environ.get("CLAUDE_BIN", "claude")
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "sonnet")
 
 
-def load_system_prompt() -> str:
-    return (PKG_ROOT / "system_prompt.md").read_text(encoding="utf-8")
-
-
-def build_user_message(task: str, attachments: list[str]) -> str:
-    lines = [f"Task: {task}"]
+def build_prompt(task: str, attachments: list[str]) -> str:
+    lines = [task]
     if attachments:
         lines.append("")
-        lines.append("Attachments (staged, reference by these names in register_sprite):")
+        lines.append("Attached files (available in data/staging/ inside the worktree):")
         for a in attachments:
-            lines.append(f"  - {a}")
+            lines.append(f"  - data/staging/{a}")
+        lines.append("")
+        lines.append("You can read these files with the Read tool. To register a sprite, use:")
+        lines.append("  python agent/scripts/register_sprite.py --staging-name <filename> --uid <uid> --animation <anim> --subdir <subdir>")
     return "\n".join(lines)
 
 
-def run_agent(task: str, attachments: list[str]) -> dict:
+def run_agent(task: str, attachments: list[str], session_id: str | None = None) -> dict:
     worktree = Path(os.environ.get("AGENT_WORKTREE", ".")).resolve()
     if not worktree.exists():
         return {"ok": False, "summary": f"worktree not found at {worktree}"}
 
-    audit_log = PKG_ROOT / "data" / "audit.log"
-    audit_log.parent.mkdir(parents=True, exist_ok=True)
-    staging = PKG_ROOT / "data" / "staging"
-
-    ctx = t.ToolContext(worktree=worktree, staging=staging, audit_log=audit_log)
-    client = Anthropic()
-
-    messages: list[dict] = [
-        {"role": "user", "content": build_user_message(task, attachments)},
-    ]
-    system_prompt = load_system_prompt()
-
-    summary: str | None = None
-    iterations = 0
-    started = time.time()
+    prompt = build_prompt(task, attachments)
     timeout = int(os.environ.get("AGENT_TIMEOUT_SECONDS", "300"))
 
-    while iterations < MAX_ITERATIONS:
-        if time.time() - started > timeout:
-            return {"ok": False, "summary": f"agent timed out after {timeout}s"}
+    cmd = [
+        CLAUDE_BIN,
+        "-p", prompt,
+        "--agent", "gamedev",
+        "--output-format", "stream-json",
+        "--model", CLAUDE_MODEL,
+        "--verbose",
+        "--max-turns", "30",
+        "--permission-mode", "bypassPermissions",
+    ]
 
-        iterations += 1
+    if session_id:
+        cmd += ["--resume", session_id]
+
+    env = os.environ.copy()
+
+    # On Windows, .cmd/.bat wrappers need cmd.exe to execute. We use
+    # ["cmd.exe", "/c", ...] instead of shell=True so that we keep full
+    # control of encoding (shell=True inherits the system codepage).
+    if sys.platform == "win32" and CLAUDE_BIN.endswith((".cmd", ".bat")):
+        cmd = ["cmd.exe", "/c"] + cmd
+
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=str(worktree),
+            env=env,
+            capture_output=True,
+            timeout=timeout,
+        )
+    except FileNotFoundError:
+        return {"ok": False, "summary": f"claude CLI not found at '{CLAUDE_BIN}'. Install with: npm install -g @anthropic-ai/claude-code"}
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "summary": f"claude CLI timed out after {timeout}s"}
+    except Exception as e:  # noqa: BLE001
+        return {"ok": False, "summary": f"claude CLI error: {type(e).__name__}: {e}"}
+
+    # Parse JSONL stdout — extract session_id from init event and result from
+    # the last result event.  Decode as UTF-8 (the CLI always outputs UTF-8
+    # regardless of the Windows console codepage).
+    stdout = proc.stdout.decode("utf-8", errors="replace") if isinstance(proc.stdout, bytes) else (proc.stdout or "")
+    stderr = proc.stderr.decode("utf-8", errors="replace") if isinstance(proc.stderr, bytes) else (proc.stderr or "")
+
+    result_text = None
+    cli_session_id = None
+    num_lines = 0
+    for line in stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        num_lines += 1
         try:
-            resp = client.messages.create(
-                model=MODEL,
-                max_tokens=MAX_TOKENS,
-                system=system_prompt,
-                tools=t.TOOL_SCHEMAS + [_FINISH_SCHEMA],
-                messages=messages,
-            )
-        except Exception as e:  # noqa: BLE001
-            return {"ok": False, "summary": f"Claude API error: {type(e).__name__}: {e}"}
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("type") == "system" and event.get("subtype") == "init":
+            cli_session_id = event.get("session_id")
+        if event.get("type") == "result":
+            result_text = event.get("result", "")
+            cli_session_id = event.get("session_id") or cli_session_id
 
-        assistant_content = [_block_to_dict(b) for b in resp.content]
-        messages.append({"role": "assistant", "content": assistant_content})
+    if result_text is not None:
+        out = {"ok": True, "summary": result_text}
+        if cli_session_id:
+            out["session_id"] = cli_session_id
+        return out
 
-        if resp.stop_reason == "end_turn" and not any(b.get("type") == "tool_use" for b in assistant_content):
-            text = _extract_text(assistant_content)
-            return {"ok": True, "summary": text or "(agent ended without summary)"}
+    # Fallback: if no result event found, check exit code and grab whatever
+    # text output we can.
+    stderr_tail = stderr[-800:]
+    stdout_tail = stdout[-800:]
 
-        tool_results: list[dict] = []
-        for block in assistant_content:
-            if block.get("type") != "tool_use":
-                continue
-            name = block["name"]
-            args = block.get("input", {}) or {}
-            if name == "finish":
-                summary = str(args.get("summary", ""))
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block["id"],
-                    "content": "OK",
-                })
-                continue
-            result = t.execute(ctx, name, args)
-            tool_results.append({
-                "type": "tool_result",
-                "tool_use_id": block["id"],
-                "content": result,
-            })
+    if proc.returncode == 0:
+        fallback = stdout.strip().splitlines()
+        last = fallback[-1] if fallback else ""
+        try:
+            evt = json.loads(last)
+            out = {"ok": True, "summary": evt.get("result", evt.get("text", "(no summary)"))}
+        except (json.JSONDecodeError, AttributeError):
+            out = {"ok": True, "summary": last or "(agent finished without summary)"}
+        if cli_session_id:
+            out["session_id"] = cli_session_id
+        return out
 
-        if summary is not None:
-            return {"ok": True, "summary": summary}
-
-        if not tool_results:
-            return {"ok": True, "summary": _extract_text(assistant_content) or "(no tool calls)"}
-
-        messages.append({"role": "user", "content": tool_results})
-
-    return {"ok": False, "summary": f"agent hit max iterations ({MAX_ITERATIONS})"}
-
-
-_FINISH_SCHEMA = {
-    "name": "finish",
-    "description": "End the task. Provide a short summary that will be posted back to Discord.",
-    "input_schema": {
-        "type": "object",
-        "properties": {"summary": {"type": "string"}},
-        "required": ["summary"],
-    },
-}
-
-
-def _block_to_dict(block) -> dict:
-    if block.type == "text":
-        return {"type": "text", "text": block.text}
-    if block.type == "tool_use":
-        return {"type": "tool_use", "id": block.id, "name": block.name, "input": block.input}
-    return {"type": block.type}
-
-
-def _extract_text(blocks: list[dict]) -> str:
-    parts = [b["text"] for b in blocks if b.get("type") == "text"]
-    return "\n".join(parts).strip()
+    return {"ok": False, "summary": f"claude CLI exited with code {proc.returncode} ({num_lines} lines parsed). stderr tail:\n{stderr_tail}\nstdout tail:\n{stdout_tail}"}
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--task", required=True)
     parser.add_argument("--attachments", nargs="*", default=[])
+    parser.add_argument("--session-id", default=None, help="Resume an existing CLI session")
     args = parser.parse_args()
 
-    result = run_agent(args.task, args.attachments)
+    result = run_agent(args.task, args.attachments, session_id=args.session_id)
     sys.stdout.write(json.dumps(result, ensure_ascii=False) + "\n")
     return 0 if result.get("ok") else 1
 
